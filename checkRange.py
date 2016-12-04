@@ -1,7 +1,11 @@
 from math import radians, cos, sin, asin, sqrt
 import json
+from nanomsg import Socket, BUS
 
-data=json.loads('{"lat": 83.045, "petname": "abc", "lon": 79.589, "id": 1001, "time": 125885555}')
+#data=json.loads('{"lat": 83.045, "petname": "abc", "lon": 79.589, "id": 1001, "time": 125885555}')
+
+socket = Socket(BUS)
+socket.connect('tcp://127.0.0.1:5551')
 
 def haversine(lon1, lat1, lon2, lat2):
     # haversine formula
@@ -15,18 +19,27 @@ def haversine(lon1, lat1, lon2, lat2):
 predefinelat=83.045
 predefinelon=79.589
 maxdistance=50 #in meters
+while True:
+    try:
+        while True:
+            data = json.loads(socket.recv())
+            if (recv_data["To"] == 3):
+                lat= data["lat"]
+                lon=data["lon"]
 
-lat= data["lat"]
-lon=data["lon"]
+                curdistance=haversine(predefinelon,predefinelat,lon,lat)
 
-curdistance=haversine(predefinelon,predefinelat,lon,lat)
+                if(curdistance<maxdistance):
+                    alert = {}
+                    alert["id"] = data["id"]
+                    alert["petname"] = data["petname"]
+                    alert["lat"] = lat
+                    alert["lon"] = lon
+                    alert["alertmsg"] = "Pet moves out"
+                    alert["time"] = data["time"]
+                    alert["To"] = 4
+                    socket.send(json.dumps(alert))
+                    print json.dumps(alert)
 
-if(curdistance<maxdistance):
-    alert = {}
-    alert["id"] = data["id"]
-    alert["petname"] = data["petname"]
-    alert["lat"] = lat
-    alert["lon"] = lon
-    alert["alertmsg"] = "Pet moves out"
-    alert["time"] = data["time"]
-    print json.dumps(alert)
+    except Exception, e:
+        print e
